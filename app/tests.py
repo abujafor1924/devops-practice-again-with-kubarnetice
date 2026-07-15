@@ -28,3 +28,12 @@ class DevOpsPracticeTests(TestCase):
         # Check some templates/context tags are in the response
         self.assertContains(response, 'DevOps Practice')
         self.assertContains(response, 'Total Visits')
+
+    def test_home_page_renders_deploy_version(self):
+        """Verify the home page loads and displays release version information."""
+        # pyrefly: ignore [missing-attribute]
+        response = self.client.get(reverse('home'))
+        # pyrefly: ignore [missing-attribute]
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Release Version')
+        self.assertContains(response, 'Local Dev')

@@ -100,21 +100,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Simulate SSH Deploy
-        run: |
-          echo "Simulating server deployment..."
-          echo "Deploying image tag: ${{ github.sha }} to production server"
-          
-          # In a real environment, you would run SSH command execution using secrets:
-          # uses: appleboy/ssh-action@master
-          # with:
-          #   host: ${{ secrets.SERVER_HOST }}
-          #   username: ${{ secrets.SERVER_USER }}
-          #   key: ${{ secrets.SSH_PRIVATE_KEY }}
-          #   script: |
-          #     docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
-          #     docker stop django-app || true
-          #     docker rm django-app || true
-          #     docker run -d --name django-app -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
-          #     # Or if deploying to Kubernetes:
-          #     # kubectl set image deployment/django-app django=${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
+      - name: SSH Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT || '22' }}
+          script: |
+            echo "Starting deployment..."
+            # Navigate to the project directory
+            cd ${{ secrets.PROJECT_PATH || '~/devops-practice' }}
+            
+            # Pull latest changes from git
+            git pull
+            
+            # Restart docker-compose stack with the updated build
+            docker compose -f devops/docker-compose.yml down
+            
+            # Run the services (web will automatically run migrations and collectstatic)
+            docker compose -f devops/docker-compose.yml up -d --build
+            
+            echo "Deployment finished successfully!"

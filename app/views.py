@@ -1,3 +1,4 @@
+import os
 import socket
 import sys
 import platform
@@ -40,6 +41,7 @@ def home_view(request):
         host_ip = "unknown"
 
     db_engine = settings.DATABASES['default']['ENGINE'].split('.')[-1]
+    deploy_version = os.environ.get('DEPLOY_VERSION') or os.environ.get('GIT_SHA') or 'Local Dev'
     
     import django
     context = {
@@ -54,6 +56,7 @@ def home_view(request):
         'recent_visits': recent_visits,
         'current_time': timezone.now(),
         'debug_mode': settings.DEBUG,
+        'deploy_version': deploy_version,
     }
     
     return render(request, 'app/index.html', context)
