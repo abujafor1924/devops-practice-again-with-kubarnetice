@@ -63,7 +63,7 @@
           REDIS_PORT=6383
           CELERY_BROKER_URL=redis://localhost:6383/0
           CELERY_RESULT_BACKEND=redis://localhost:6383/0
-          APP_PORT=8000
+          APP_PORT=5040
           NGINX_PORT=8080
           NGINX_SSL_PORT=8443
           PROMETHEUS_PORT=9090
