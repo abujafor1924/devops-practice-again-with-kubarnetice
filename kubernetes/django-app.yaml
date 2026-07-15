@@ -1,0 +1,248 @@
+# ==============================================================================
+# NGINX REVERSE PROXY CONFIGMAP
+# ==============================================================================
+# Configures Nginx rules to forward dynamic traffic to Gunicorn listening on localhost
+# and serve static assets directly from the shared volume.
+# ==============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  labels:
+    app: django
+data:
+  default.conf: |
+    # Since Django and Nginx share the same Pod network namespace,
+    # Nginx can reach Gunicorn on localhost (127.0.0.1).
+    upstream django_backend {
+        server 127.0.0.1:8000;
+    }
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        # Main ingress routing to Gunicorn
+        location / {
+            proxy_pass http://django_backend;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+        }
+
+        # Static files route served directly by Nginx (bypasses Django)
+        location /static/ {
+            alias /app/staticfiles/;
+        }
+    }
+
+---
+
+# ==============================================================================
+# MULTI-CONTAINER DJANGO & NGINX POD DEPLOYMENT (SIDECAR PATTERN)
+# ==============================================================================
+# This pattern runs both Django (WSGI) and Nginx (proxy) in the same Pod.
+# This solves static file sharing and ensures they scale up/down together.
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app
+  labels:
+    app: django
+spec:
+  replicas: 2                # High availability scaling
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      # Init-Container: Runs database migrations before main containers start
+      initContainers:
+        - name: init-migrate
+          image: devops-web:latest
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for database..."
+              until pg_isready -h $DB_HOST -U $POSTGRES_USER -d $POSTGRES_DB; do
+                sleep 2
+              done
+              echo "Database is ready! Running migrations..."
+              python manage.py migrate --noinput
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_PORT
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(POSTGRES_DB)"
+
+      containers:
+        # Container 1: Django Web Application (WSGI Gunicorn Server)
+        - name: django
+          image: devops-web:latest
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - |
+              # Collect static files into the shared volume, then boot Gunicorn
+              python manage.py collectstatic --noinput
+              gunicorn -c devops/gunicorn.conf.py config.wsgi:application
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_PORT
+            - name: DATABASE_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(POSTGRES_DB)"
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: CELERY_BROKER_URL
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: CELERY_RESULT_BACKEND
+            - name: SECRET_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SECRET_KEY
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DEBUG
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ALLOWED_HOSTS
+          volumeMounts:
+            - name: static-volume
+              mountPath: /app/staticfiles # Django writes static files here
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+
+        # Container 2: Nginx Reverse Proxy (Sidecar Container)
+        - name: nginx
+          image: nginx:1.25-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+            - name: static-volume
+              mountPath: /app/staticfiles:ro # Nginx reads static files directly (read-only)
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "150m"
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+      volumes:
+        # shared emptyDir volume for static files
+        - name: static-volume
+          emptyDir: {}
+        # mount Nginx config from ConfigMap
+        - name: nginx-conf
+          configMap:
+            name: nginx-config
+
+---
+
+# ==============================================================================
+# DJANGO-NGINX PUBLIC NODEPORT SERVICE
+# ==============================================================================
+# Exposes the Nginx sidecar container to the host machine using a NodePort.
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-nginx-service
+  labels:
+    app: django
+spec:
+  type: NodePort
+  ports:
+    - port: 80               # Port exposed inside the cluster
+      targetPort: 80         # Forwards traffic to Nginx container port 80
+      nodePort: 30080        # Bind to port 30080 on the host (http://<minikube-ip>:30080)
+      name: http
+  selector:
+    app: django

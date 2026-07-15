@@ -1,0 +1,30 @@
+# ==============================================================================
+# PROMETHEUS ALERTING RULES
+# ==============================================================================
+# Defines conditions (rules) under which Prometheus will trigger alert events
+# and dispatch them to the Alertmanager.
+# ==============================================================================
+
+groups:
+  - name: system_alerts
+    rules:
+      # Alert 1: Target Exporter is offline
+      - alert: InstanceDown
+        expr: up == 0 # Triggers if any scrape target returns offline status
+        for: 1m      # Must remain offline for at least 1 minute before firing
+        labels:
+          severity: critical
+        annotations:
+          summary: "Exporter Target {{ $labels.instance }} is offline"
+          description: "Target exporter on instance {{ $labels.instance }} has been down for more than 1 minute."
+
+      # Alert 2: High host CPU load
+      - alert: HostHighCpuLoad
+        # Calculate CPU usage: 100 minus the percentage of time CPU is idle
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "Host CPU utilization is at {{ $value | printf \"%.2f\" }}% (exceeded threshold of 85%) for more than 2 minutes."

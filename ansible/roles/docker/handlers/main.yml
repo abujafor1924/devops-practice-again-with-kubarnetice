@@ -1,0 +1,12 @@
+# ==============================================================================
+# HANDLERS FOR DOCKER ROLE
+# ==============================================================================
+# Handlers are special tasks that only run when notified by another task that
+# reported a status of "changed" (e.g. updating a configuration file).
+# Handlers run once at the very end of the play.
+# ==============================================================================
+
+- name: Restart Docker Daemon
+  service:
+    name: docker
+    state: restarted

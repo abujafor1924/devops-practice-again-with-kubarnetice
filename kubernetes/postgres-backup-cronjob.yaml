@@ -1,0 +1,96 @@
+# ==============================================================================
+# AUTOMATED POSTGRESQL BACKUP CRONJOB
+# ==============================================================================
+# A CronJob creates Jobs on a repeating schedule (similar to crontab in Linux).
+# This is the standard, automated way to create periodic database snapshots
+# (backups) for disaster recovery and company data safety.
+# ==============================================================================
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc  # Dedicated PVC to store database backups safely
+  labels:
+    app: postgres
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi          # Allocating larger storage space to accommodate multiple backup files
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  labels:
+    app: postgres
+spec:
+  schedule: "0 2 * * *"      # Standard Cron expression. Runs every day at 2:00 AM UTC.
+  concurrencyPolicy: Forbid  # Prevents spawning a new backup job if the previous one is still running
+  successfulJobsHistoryLimit: 3 # Keeps records of the last 3 successful jobs
+  failedJobsHistoryLimit: 5  # Keeps records of the last 5 failed jobs for debugging logs
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          containers:
+            - name: postgres-backup
+              image: postgres:15-alpine # Lightweight alpine image with pg_dump pre-installed
+              command:
+                - sh
+                - -c
+                - |
+                  echo "Starting database backup process..."
+                  DATE=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backups/db_backup_${DATE}.sql.gz"
+                  
+                  # pg_dump extracts the database. We pipe it to gzip to compress the backup size.
+                  # Note: pg_dump automatically uses the PGPASSWORD environment variable to authenticate.
+                  pg_dump -h $DB_HOST -U $POSTGRES_USER -d $POSTGRES_DB | gzip > $BACKUP_FILE
+                  
+                  if [ $? -eq 0 ]; then
+                    echo "Backup successfully created and saved: ${BACKUP_FILE}"
+                    
+                    # DevOps Production Tip:
+                    # In a production environment, you should copy this backup file to an external off-site
+                    # object storage (e.g. AWS S3 or Google Cloud Storage) to ensure durability:
+                    # aws s3 cp ${BACKUP_FILE} s3://company-db-backups/postgres/
+                    
+                  else
+                    echo "ERROR: Backup creation failed!"
+                    exit 1
+                  fi
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secrets
+                      key: postgres-user
+                # pg_dump automatically reads PGPASSWORD environment variable to authenticate
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secrets
+                      key: postgres-password
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secrets
+                      key: postgres-db
+                - name: DB_HOST
+                  value: "postgres-service" # Resolves internally to the Postgres ClusterIP service
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups      # Directory where the backup script writes the compressed file
+          restartPolicy: OnFailure          # If the backup script fails, K8s restarts the Pod to retry
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc

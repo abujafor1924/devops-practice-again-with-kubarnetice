@@ -1,0 +1,65 @@
+# ==============================================================================
+# REDIS BROKER DEPLOYMENT
+# ==============================================================================
+# Deploys Redis to act as the message broker queue for Celery tasks.
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-broker
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379   # Default port Redis listens on
+              name: redis
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+          livenessProbe:
+            exec:
+              command:
+                - "redis-cli"
+                - "ping"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+
+# ==============================================================================
+# REDIS SERVICE
+# ==============================================================================
+# Exposes Redis to internal cluster components (Django web app and Celery worker).
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service        # DNS name: 'redis-service'
+  labels:
+    app: redis
+spec:
+  type: ClusterIP            # Only accessible within the cluster network
+  ports:
+    - port: 6379             # Service port
+      targetPort: 6379       # Pod port
+      name: redis
+  selector:
+    app: redis               # Selects the Redis deployment pod

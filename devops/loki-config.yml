@@ -1,0 +1,40 @@
+# ==============================================================================
+# GRAFANA LOKI CONFIGURATION (LOG DATASTORE)
+# ==============================================================================
+# Configures Loki's internal datastore ports, schema versions, and filesystem paths.
+# Loki is designed to store metadata labels (like Prometheus) instead of indexing
+# full log text, making it extremely lightweight.
+# ==============================================================================
+
+auth_enabled: false          # Disable multi-tenancy auth for local developer setup
+
+server:
+  http_listen_port: 3100     # Port Loki listens on for Promtail client logs push
+
+common:
+  path_prefix: /loki         # Base path for local storage
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory        # Fast in-memory key-value ring (no external Consul/Etcd needed)
+
+# Defines how log indices and database chunks are stored
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper  # Fast index engine
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h          # Shards the database index daily
+
+# Setting safety limitations
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h # Reject logs older than 7 days
+  creation_grace_period: 10m

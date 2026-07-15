@@ -1,0 +1,39 @@
+# ==============================================================================
+# GRAFANA PROMTAIL CONFIGURATION (LOG AGENT/COLLECTOR)
+# ==============================================================================
+# Promtail runs as an agent on servers to scrape log files and push them to Loki.
+# It behaves similarly to the Prometheus scraping engine, using identical config structures.
+# ==============================================================================
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+# Path where Promtail remembers how far it has read each log file
+# (Prevents re-reading files from the beginning on Promtail agent restart)
+positions:
+  filename: /tmp/positions.yaml
+
+# List of Loki datastore clients to forward collected logs to
+clients:
+  - url: http://loki:3100/loki/api/v1/push # URL of our Loki service container
+
+# Scrape jobs definitions
+scrape_configs:
+  # Job 1: System logs (syslog, auth.log, etc.) from host machine mount
+  - job_name: system-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs       # Metadata label in Loki
+          __path__: /var/log/*log # Path to read log files from
+
+  # Job 2: Container standard output logs
+  - job_name: container-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker-containers
+          __path__: /var/lib/docker/containers/*/*.log # Reads docker logs directly (mounted read-only)

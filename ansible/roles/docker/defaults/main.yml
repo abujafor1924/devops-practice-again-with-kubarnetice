@@ -1,0 +1,16 @@
+# ==============================================================================
+# DEFAULT VARIABLES FOR DOCKER ROLE
+# ==============================================================================
+# Variables defined here have the lowest precedence and can be easily overridden
+# in playbooks or host files if different versions are required.
+# ==============================================================================
+
+docker_required_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - python3-docker # Required for Ansible Docker modules to communicate with Docker API
+
+docker_daemon_config_path: "/etc/docker/daemon.json"

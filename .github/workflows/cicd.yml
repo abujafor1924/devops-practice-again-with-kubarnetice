@@ -1,0 +1,120 @@
+# ==============================================================================
+# GITHUB ACTIONS CI/CD WORKFLOW
+# ==============================================================================
+# GitHub Actions automates software workflows. This file defines a pipeline that:
+# 1. Runs tests on multiple Python versions (Matrix build).
+# 2. Builds and pushes the Docker image to Docker Hub (if tests pass).
+# 3. Simulates SSH deployment into a remote production server.
+# ==============================================================================
+
+name: Django DevOps CI/CD Pipeline
+
+on:
+  # Triggers the workflow on push or pull requests to main or master branches
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # JOB 1: TESTING STAGE (Runs on a matrix of Python environments)
+  # ----------------------------------------------------------------------------
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest # The Runner (OS environment hosted by GitHub)
+
+    strategy:
+      # Matrix testing runs multiple jobs concurrently under different versions
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      # Step 1: Checkout the git repository code onto the runner
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Python runtime matching the matrix version
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip" # Caches pip dependencies to speed up subsequent runs
+
+      # Step 3: Install application requirements
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run unit tests
+      - name: Run Django Tests
+        run: |
+          python manage.py test
+
+  # ----------------------------------------------------------------------------
+  # JOB 2: CONTAINER BUILD & PUSH (Only runs if 'test' succeeds)
+  # ----------------------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: test              # Dependency constraint: Test job MUST succeed first
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 1: Set up Buildx (advanced Docker build tool)
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      # Step 2: Log in to Docker Hub using secure Secrets stored in GitHub Settings
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Step 3: Build and push the Docker image with 'latest' and commit SHA tags
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: devops/dockerfile
+          push: true
+          # Tags the image with 'latest' and the unique git commit hash (for tracking)
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
+
+  # ----------------------------------------------------------------------------
+  # JOB 3: DEPLOYMENT STAGE (Only runs if 'build-and-push' succeeds)
+  # ----------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Server
+    needs: build-and-push    # Deploy only runs if the Docker image was pushed
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Simulate SSH Deploy
+        run: |
+          echo "Simulating server deployment..."
+          echo "Deploying image tag: ${{ github.sha }} to production server"
+          
+          # In a real environment, you would run SSH command execution using secrets:
+          # uses: appleboy/ssh-action@master
+          # with:
+          #   host: ${{ secrets.SERVER_HOST }}
+          #   username: ${{ secrets.SERVER_USER }}
+          #   key: ${{ secrets.SSH_PRIVATE_KEY }}
+          #   script: |
+          #     docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
+          #     docker stop django-app || true
+          #     docker rm django-app || true
+          #     docker run -d --name django-app -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}
+          #     # Or if deploying to Kubernetes:
+          #     # kubectl set image deployment/django-app django=${{ secrets.DOCKERHUB_USERNAME }}/devops-practice:${{ github.sha }}

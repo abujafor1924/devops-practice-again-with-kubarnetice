@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s       # How frequently Prometheus scrapes targets by default
+  evaluation_interval: 15s   # How frequently Prometheus evaluates alerting rules
+
+# ==============================================================================
+# ALERTMANAGER CONFIGURATION
+# ==============================================================================
+# Tells Prometheus how to contact the Alertmanager service container
+# ==============================================================================
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093' # Resolves to the Alertmanager container IP
+
+# ==============================================================================
+# RULE FILES CONFIGURATION
+# ==============================================================================
+# Loads files containing alerting rules. Prom evaluates these on interval schedules.
+# ==============================================================================
+rule_files:
+  - "alert_rules.yml"
+
+# ==============================================================================
+# SCRAPE TARGETS CONFIGURATION
+# ==============================================================================
+# Configures the endpoints Prometheus queries to collect system metrics.
+# ==============================================================================
+scrape_configs:
+  # Job 1: Prometheus self-metrics
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Job 2: cAdvisor container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Job 3: Node Exporter host system physical metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Job 4: Alertmanager internal metrics
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']

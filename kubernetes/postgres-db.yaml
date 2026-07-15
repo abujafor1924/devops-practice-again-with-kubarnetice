@@ -1,0 +1,146 @@
+# ==============================================================================
+# POSTGRES STORAGE SETUP (PV AND PVC)
+# ==============================================================================
+# In Kubernetes, Pod filesystems are ephemeral. If a database Pod restarts, its
+# data is lost. We use PersistentVolumes (PV) to represent a piece of storage
+# in the cluster, and PersistentVolumeClaims (PVC) to request that storage.
+# ==============================================================================
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual   # Custom storage class name to bind PV and PVC together
+  capacity:
+    storage: 5Gi             # Reserve 5 Gigabytes of storage capacity
+  accessModes:
+    - ReadWriteOnce          # Volume can be mounted as read-write by a single Node
+  hostPath:
+    path: "/mnt/data/postgres" # Local node directory where DB data will be persisted (for Minikube/dev)
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc         # PVC name referred to by the Postgres deployment
+  labels:
+    app: postgres
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi           # Match the 5Gi requested capacity of the PV
+
+---
+
+# ==============================================================================
+# POSTGRES DEPLOYMENT
+# ==============================================================================
+# Deployments define the desired state for our pods (such as replica counts,
+# container images, port bindings, and mounting rules).
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+  labels:
+    app: postgres
+spec:
+  replicas: 1                # Database servers typically run with 1 replica to avoid write conflicts
+  selector:
+    matchLabels:
+      app: postgres          # Identifies which Pods belong to this deployment
+  template:
+    metadata:
+      labels:
+        app: postgres        # Labels applied to the Pods created by this template
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432 # Internal port PostgreSQL listens on inside the container
+              name: postgres
+          env:
+            # Map environment variables from the Secret we created:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: postgres-password
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data # Standard directory where Postgres stores its databases
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          # Liveness and Readiness probes help Kubernetes know if the container is running and ready.
+          livenessProbe:
+            exec:
+              command:
+                - "pg_isready"
+                - "-U"
+                - "myuser"
+                - "-d"
+                - "mydatabase"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - "pg_isready"
+                - "-U"
+                - "myuser"
+                - "-d"
+                - "mydatabase"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc # Mounts the requested local storage directory to this container
+
+---
+
+# ==============================================================================
+# POSTGRES SERVICE
+# ==============================================================================
+# A Service acts as a load-balancer and stable interface to reach the DB Pods.
+# We use ClusterIP (default) so that Postgres is only reachable inside the cluster.
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service     # DNS name resolves to this Service IP internally
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP            # Restricts service access to internal cluster communication only
+  ports:
+    - port: 5432             # Port exposed by the Service to client Pods
+      targetPort: 5432       # Port inside the destination Postgres Pod
+      name: postgres
+  selector:
+    app: postgres            # Routes traffic to any Pod matching this label

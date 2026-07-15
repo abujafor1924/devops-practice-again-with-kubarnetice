@@ -1,0 +1,31 @@
+# ==============================================================================
+# ALERTMANAGER CONFIGURATION
+# ==============================================================================
+# Receives alerts from Prometheus, groups them, removes duplicates, and routes
+# them to final notification channels (Slack, Email, PagerDuty, etc.).
+# ==============================================================================
+
+global:
+  resolve_timeout: 5m       # Mark alert as resolved if no new event in 5 minutes
+
+# Routing tree
+route:
+  group_by: ['alertname']   # Group related alerts together by name
+  group_wait: 10s           # Time to wait to group matching alerts before sending
+  group_interval: 10s       # Time to wait before sending newly grouped alerts
+  repeat_interval: 1h       # How long to wait before sending a reminder alert
+  receiver: 'slack-notifications' # Default alert receiver channel
+
+# Define alert destination channels
+receivers:
+  - name: 'slack-notifications'
+    # Example Production Slack Webhook Integration (Commented out):
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts'
+    #     send_resolved: true # Notifies Slack when the issue is fixed!
+    
+    # We use a placeholder local log receiver for learning:
+    webhook_configs:
+      - url: 'http://alert-logger-service:5000/'
+        send_resolved: true
