@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 # pyrefly: ignore [missing-import]
 import dj_database_url
@@ -78,10 +79,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-# Fallback to SQLite if DATABASE_URL is not set
+# Fallback to SQLite if DATABASE_URL is not set or if we are running unit tests
 DATABASE_URL = os.environ.get('DATABASE_URL')
+IS_TESTING = 'test' in sys.argv
 
-if DATABASE_URL:
+if DATABASE_URL and not IS_TESTING:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
