@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Practice Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #080c14;
+            --bg-secondary: rgba(17, 25, 40, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --color-blue: #3b82f6;
+            --color-purple: #8b5cf6;
+            --color-green: #10b981;
+            --color-red: #ef4444;
+            
+            --glow-blue: rgba(59, 130, 246, 0.15);
+            --glow-purple: rgba(139, 92, 246, 0.15);
+            --glow-green: rgba(16, 185, 129, 0.15);
+            --glow-red: rgba(239, 68, 68, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient background glow effects */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        header {
+            padding: 2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(8, 12, 20, 0.5);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+            100% { box-shadow: 0 0 25px rgba(139, 92, 246, 0.6); }
+        }
+
+        .logo-icon svg {
+            width: 22px;
+            height: 22px;
+            color: white;
+        }
+
+        .logo-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .badge-live {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-green);
+        }
+
+        .badge-live-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--color-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-green);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        main {
+            flex: 1;
+            padding: 2.5rem 5%;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-card.blue:hover { box-shadow: 0 10px 30px var(--glow-blue); }
+        .metric-card.green:hover { box-shadow: 0 10px 30px var(--glow-green); }
+        .metric-card.purple:hover { box-shadow: 0 10px 30px var(--glow-purple); }
+        .metric-card.red:hover { box-shadow: 0 10px 30px var(--glow-red); }
+
+        .metric-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .metric-subtext {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .metric-icon-wrapper {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .blue .metric-icon-wrapper { background: rgba(59, 130, 246, 0.1); color: var(--color-blue); border: 1px solid rgba(59, 130, 246, 0.15); }
+        .green .metric-icon-wrapper { background: rgba(16, 185, 129, 0.1); color: var(--color-green); border: 1px solid rgba(16, 185, 129, 0.15); }
+        .purple .metric-icon-wrapper { background: rgba(139, 92, 246, 0.1); color: var(--color-purple); border: 1px solid rgba(139, 92, 246, 0.15); }
+        .red .metric-icon-wrapper { background: rgba(239, 68, 68, 0.1); color: var(--color-red); border: 1px solid rgba(239, 68, 68, 0.15); }
+
+        .metric-icon-wrapper svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        /* Content section */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: fit-content;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .panel-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .panel-title svg {
+            width: 20px;
+            height: 20px;
+            color: var(--color-blue);
+        }
+
+        /* Detail List */
+        .details-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0.85rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s;
+        }
+
+        .detail-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            text-align: right;
+            max-width: 60%;
+            word-break: break-all;
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-status.connected {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-green);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-status.error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--color-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-status.debug-on {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .badge-status.debug-off {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--color-blue);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* Recent Activity Table */
+        .visit-table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .visit-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .visit-table th, .visit-table td {
+            padding: 1rem;
+        }
+
+        .visit-table th {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .visit-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .visit-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .visit-table tr:hover td {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .ip-badge {
+            font-family: 'Fira Code', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .empty-visits {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        /* Health check interactive section */
+        .health-action-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px dashed rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            margin-top: auto;
+        }
+
+        .health-action-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .health-link {
+            background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .health-link:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 2rem 5%;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: rgba(8, 12, 20, 0.3);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-time {
+            font-family: 'Fira Code', monospace;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 600px) {
+            header, footer {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            .footer-time {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <div class="logo-icon">
+                <!-- Server SVG Icon -->
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="logo-title">DevOps Practice</h1>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Django App Infrastructure Test</p>
+            </div>
+        </div>
+        <div class="badge-live">
+            <span class="badge-live-dot"></span>
+            <span>APP INSTANCE ONLINE</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Metrics Cards -->
+        <section class="metrics-grid">
+            <!-- Total visits -->
+            <div class="metric-card blue">
+                <div class="metric-info">
+                    <span class="metric-label">Total Visits</span>
+                    <span class="metric-value">{{ visit_count }}</span>
+                    <span class="metric-subtext">Recorded in Database</span>
+                </div>
+                <div class="metric-icon-wrapper">
+                    <!-- Users Icon -->
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- DB Connection -->
+            {% if db_status == "Connected" %}
+            <div class="metric-card green">
+            {% else %}
+            <div class="metric-card red">
+            {% endif %}
+                <div class="metric-info">
+                    <span class="metric-label">Database Status</span>
+                    <span class="metric-value" style="font-size: 1.6rem; margin-top: 0.4rem;">
+                        {% if db_status == "Connected" %}Online{% else %}Error{% endif %}
+                    </span>
+                    <span class="metric-subtext">Engine: {{ db_engine }}</span>
+                </div>
+                <div class="metric-icon-wrapper">
+                    <!-- Database Icon -->
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Host Info -->
+            <div class="metric-card purple">
+                <div class="metric-info">
+                    <span class="metric-label">Container / Host</span>
+                    <span class="metric-value" style="font-size: 1.4rem; font-family: 'Fira Code', monospace; margin-top: 0.6rem;">{{ hostname }}</span>
+                    <span class="metric-subtext">IP: {{ host_ip }}</span>
+                </div>
+                <div class="metric-icon-wrapper">
+                    <!-- Chip/CPU Icon -->
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Info and Logs -->
+        <section class="content-grid">
+            <!-- System Details Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <!-- Info Icon -->
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        System Environment
+                    </h2>
+                </div>
+                
+                <div class="details-list">
+                    <div class="detail-item">
+                        <span class="detail-label">Django Version</span>
+                        <span class="detail-value">v{{ django_version }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Python Version</span>
+                        <span class="detail-value">{{ python_version|truncatechars:40 }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Operating System</span>
+                        <span class="detail-value">{{ os_info }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Database Configuration</span>
+                        <span class="detail-value">
+                            {% if db_status == "Connected" %}
+                                <span class="badge-status connected">Active ({{ db_engine }})</span>
+                            {% else %}
+                                <span class="badge-status error">Failed</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Django Debug Mode</span>
+                        <span class="detail-value">
+                            {% if debug_mode %}
+                                <span class="badge-status debug-on">Enabled</span>
+                            {% else %}
+                                <span class="badge-status debug-off">Disabled</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="health-action-box">
+                    <div class="health-action-text">
+                        <strong>Practice DevOps:</strong> Verify the health endpoint response (JSON) used by load balancers and orchestrators.
+                    </div>
+                    <a href="/health/" class="health-link" target="_blank">Test /health/</a>
+                </div>
+            </div>
+
+            <!-- Recent Visits Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <!-- Clock/History Icon -->
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Recent Visit Logs
+                    </h2>
+                </div>
+
+                <div class="visit-table-wrapper">
+                    {% if recent_visits %}
+                        <table class="visit-table">
+                            <thead>
+                                <tr>
+                                    <th>Client IP</th>
+                                    <th>Timestamp (UTC)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for visit in recent_visits %}
+                                    <tr>
+                                        <td>
+                                            <span class="ip-badge">{{ visit.ip_address|default:"127.0.0.1" }}</span>
+                                        </td>
+                                        <td style="color: var(--text-secondary);">
+                                            {{ visit.timestamp|date:"Y-m-d H:i:s" }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="empty-visits">
+                            No visits recorded yet. Check database connection or run migrations.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div>
+            <span>Django DevOps Practice App</span>
+        </div>
+        <div class="footer-time">
+            Server Time: {{ current_time|date:"Y-m-d H:i:s" }} UTC
+        </div>
+    </footer>
+
+</body>
+</html>
