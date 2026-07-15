@@ -697,6 +697,103 @@
             </div>
         </section>
 
+        <!-- Infrastructure Services Map -->
+        <section class="panel" style="margin-top: 1rem;">
+            <div class="panel-header">
+                <h2 class="panel-title" style="color: var(--color-green);">
+                    <!-- Server Map Icon -->
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="color: var(--color-green); width: 20px; height: 20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    DevOps Infrastructure Services & Live Clock
+                </h2>
+                <div style="font-family: 'Fira Code', monospace; font-size: 0.9rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.35rem 0.85rem; border-radius: 8px; color: var(--color-green);" id="live-clock">
+                    Clock Loading...
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <!-- Service 1: Nginx -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Nginx Proxy</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; margin-top: 0.25rem;">Port 8080</div>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: var(--color-green); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); animation: blink 1.5s infinite;"></span>
+                        ONLINE
+                    </span>
+                </div>
+                
+                <!-- Service 2: Django -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Django App</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; margin-top: 0.25rem;">Port 5040</div>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: var(--color-green); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); animation: blink 1.5s infinite;"></span>
+                        ONLINE
+                    </span>
+                </div>
+                
+                <!-- Service 3: PostgreSQL -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">PostgreSQL</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; margin-top: 0.25rem;">Port 5435</div>
+                    </div>
+                    {% if db_status == "Connected" %}
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: var(--color-green); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); animation: blink 1.5s infinite;"></span>
+                        ONLINE
+                    </span>
+                    {% else %}
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: var(--color-red); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-red);"></span>
+                        OFFLINE
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Service 4: Redis -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Redis Broker</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; margin-top: 0.25rem;">Port 6383</div>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: var(--color-green); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); animation: blink 1.5s infinite;"></span>
+                        ONLINE
+                    </span>
+                </div>
+
+                <!-- Service 5: Celery -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Celery Worker</div>
+                        <div style="font-size: 0.9rem; font-weight: 700; margin-top: 0.25rem;">Background</div>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: var(--color-green); display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-green); animation: blink 1.5s infinite;"></span>
+                        ACTIVE
+                    </span>
+                </div>
+            </div>
+            
+            <script>
+                function updateClock() {
+                    const now = new Date();
+                    const options = { timeZone: 'UTC', timeZoneName: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+                    const utcString = now.toLocaleTimeString('en-US', options);
+                    const localString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                    document.getElementById('live-clock').innerText = `UTC: ${utcString} | Local: ${localString}`;
+                }
+                setInterval(updateClock, 1000);
+                updateClock();
+            </script>
+        </section>
+
         <!-- CI/CD Deployment Pipeline Overview -->
         <section class="panel" style="margin-top: 1rem;">
             <div class="panel-header">
