@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis-broker
-    restart: unless-stopped
+    restart: always
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
@@ -36,7 +36,7 @@ services:
       context: ..
       dockerfile: devops/dockerfile
     container_name: django-app
-    restart: unless-stopped
+    restart: always
     ports:
       - "${APP_PORT:-8000}:8000"
     command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn -c devops/gunicorn.conf.py config.wsgi:application"
@@ -59,7 +59,7 @@ services:
       context: ..
       dockerfile: devops/dockerfile
     container_name: celery-worker
-    restart: unless-stopped
+    restart: always
     command: celery -A config worker --loglevel=info
     env_file:
       - .env
@@ -76,7 +76,7 @@ services:
   nginx:
     image: nginx:1.25-alpine
     container_name: nginx-proxy
-    restart: unless-stopped
+    restart: always
     ports:
       - "${NGINX_PORT:-8080}:80"
       - "${NGINX_SSL_PORT:-8443}:443"
@@ -90,7 +90,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: cadvisor
-    restart: unless-stopped
+    restart: always
     ports:
       - "${CADVISOR_PORT:-8082}:8080"
     volumes:
@@ -106,7 +106,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    restart: unless-stopped
+    restart: always
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
@@ -118,7 +118,7 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
-    restart: unless-stopped
+    restart: always
     ports:
       - "9100:9100"
     volumes:
@@ -133,7 +133,7 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
-    restart: unless-stopped
+    restart: always
     ports:
       - "9093:9093"
     volumes:
@@ -142,7 +142,7 @@ services:
   loki:
     image: grafana/loki:2.9.2
     container_name: loki
-    restart: unless-stopped
+    restart: always
     ports:
       - "3100:3100"
     volumes:
@@ -152,7 +152,7 @@ services:
   promtail:
     image: grafana/promtail:2.9.2
     container_name: promtail
-    restart: unless-stopped
+    restart: always
     volumes:
       - ./promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/log:/var/log:ro
@@ -162,7 +162,7 @@ services:
   grafana:
     image: grafana/grafana-oss:latest
     container_name: grafana
-    restart: unless-stopped
+    restart: always
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
@@ -176,7 +176,7 @@ services:
       context: ..
       dockerfile: devops/dockerfile
     container_name: flower-monitor
-    restart: unless-stopped
+    restart: always
     command: celery -A config flower --port=5555
     env_file:
       - .env
